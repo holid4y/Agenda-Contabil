@@ -1,5 +1,3 @@
-// Hash router: "#/atendimentos/12?x=1". Each view returns { html, mount?(root) }.
-
 import { store } from './store.js';
 
 const routes = [];
@@ -28,7 +26,6 @@ export const navigate = (hash, { replace = false } = {}) => {
     else location.hash = hash;
 };
 
-/** Goes back when the previous screen is inside the app, otherwise to `fallback`. */
 export const back = (fallback = '/') => {
     if (stack.length > 1) history.back();
     else navigate(fallback, { replace: true });
@@ -46,6 +43,8 @@ function render({ keepScroll = false } = {}) {
     if (!match) return navigate('/', { replace: true });
     if (!match.public && !user) return navigate('/login', { replace: true });
     if (match.public && user) return navigate('/', { replace: true });
+
+    if (match.public) document.getElementById('overlay').innerHTML = '';
 
     const params = Object.fromEntries(match.keys.map((key, i) => [key, decodeURIComponent(path.match(match.regex)[i + 1])]));
     const scroll = keepScroll ? outlet.scrollTop : 0;
@@ -81,7 +80,6 @@ export function start(element) {
         render();
     });
 
-    // Delegated "back" buttons: data-back="/fallback".
     outlet.addEventListener('click', (event) => {
         const button = event.target.closest('[data-back]');
         if (button) back(button.dataset.back);

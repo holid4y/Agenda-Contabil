@@ -1,5 +1,5 @@
 import { CLIENT_TYPES } from '../data.js';
-import { can, clientAppointments, clientOf, saveClient, searchClients, ValidationError } from '../domain.js';
+import { can, clientAppointments, clientOf, searchClients, ValidationError } from '../domain.js';
 import { navigate } from '../router.js';
 import { store } from '../store.js';
 import { appointmentRow, avatar, backButton, emptyState, icon, toast } from '../ui.js';
@@ -69,7 +69,6 @@ export function clientList({ state, user }) {
                 box.innerHTML = results(filter.term, filter.type);
             };
 
-            // Answers while typing (RNF-010).
             input.addEventListener('input', update);
             root.querySelector('#profile').addEventListener('click', openProfile);
             root.querySelectorAll('[data-type]').forEach((button) =>
@@ -155,7 +154,6 @@ export function clientForm({ params, state, user }) {
     };
 }
 
-/** Shared by the client screen and by the "new client" step of the appointment flow. */
 export function clientFormBody(client = null, { compact = false } = {}) {
     const type = client?.type ?? 'individual';
     return `<form class="form" id="client-form" novalidate>
@@ -231,30 +229,30 @@ export function mountClientForm(root, client, onSaved) {
     form.phone.addEventListener('input', () => (form.phone.value = formatPhone(form.phone.value)));
     form.document?.addEventListener('input', () => (form.document.value = maskDocument(form.document.value, type)));
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        const submit = form.querySelector('[type="submit"]');
+        if (submit.disabled) return;
+        submit.disabled = true;
         root.querySelectorAll('[data-error]').forEach((el) => (el.hidden = true));
         root.querySelector('#form-error').hidden = true;
         form.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
 
         try {
-            const saved = store.commit((state, user) =>
-                saveClient(
-                    state,
-                    user,
-                    {
-                        type,
-                        name: form.name.value,
-                        tradeName: form.tradeName.value,
-                        phone: form.phone.value,
-                        email: form.email.value,
-                        document: form.document?.value ?? client?.document ?? '',
-                        notes: form.notes?.value ?? client?.notes ?? '',
-                        acceptsReminders: form.acceptsReminders.checked,
-                        active: form.active ? form.active.checked : true,
-                    },
-                    client?.id ?? null,
-                ),
+            const saved = await store.action(
+                'saveClient',
+                {
+                    type,
+                    name: form.name.value,
+                    tradeName: form.tradeName.value,
+                    phone: form.phone.value,
+                    email: form.email.value,
+                    document: form.document?.value ?? client?.document ?? '',
+                    notes: form.notes?.value ?? client?.notes ?? '',
+                    acceptsReminders: form.acceptsReminders.checked,
+                    active: form.active ? form.active.checked : true,
+                },
+                client?.id ?? null,
             );
             onSaved(saved);
         } catch (error) {
@@ -270,6 +268,8 @@ export function mountClientForm(root, client, onSaved) {
                 box.textContent = error.message;
                 box.hidden = false;
             }
+        } finally {
+            submit.disabled = false;
         }
     });
 }

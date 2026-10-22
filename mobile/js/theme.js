@@ -1,10 +1,7 @@
-// index.html applies the saved theme before first paint; this keeps it in sync.
-
 const KEY = 'agenda-contabil.theme';
 const query = window.matchMedia('(prefers-color-scheme: dark)');
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Shorter than the web version (900ms): it is a small screen.
 const REVEAL_MS = 600;
 const REVEAL_EASING = 'cubic-bezier(0.65, 0, 0.35, 1)';
 
@@ -26,7 +23,6 @@ const paint = (theme) => {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c1815' : '#f6f1e9');
 };
 
-// A circle grows from the tapped button and reveals the new theme.
 function reveal(theme, origin) {
     const root = document.documentElement;
     const { left, top, width, height } = origin.getBoundingClientRect();

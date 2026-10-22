@@ -1,5 +1,3 @@
-// Made-up demo data, built around today so the agenda is never empty.
-
 import { CATALOG } from './data.js';
 import { changeStatus, scheduleAppointment, toggleDocument, ValidationError } from './domain.js';
 import { addDays, at, dayKey, minutes, pad, startOfDay } from './util.js';
@@ -212,8 +210,7 @@ export function buildSeed(now = Date.now()) {
         addAppointment({ dayMs, when, duration, clientIndex, serviceSlug, responsibleId, status, where });
     }
 
-    // History for the impact panel.
-    const random = mulberry32(2026);
+        const random = mulberry32(2026);
     const TEAM = [[1, 2], [2, 3], [4, 3], [5, 2]];
     for (let offset = -11; offset >= -165; offset--) {
         const dayMs = addDays(today, offset);

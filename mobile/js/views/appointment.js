@@ -4,20 +4,15 @@ import {
     busyOn,
     can,
     categoryOf,
-    changeStatus,
     clientOf,
     describeActivity,
     findConflict,
     conflictMessage,
     locationLabel,
     reminderBlocker,
-    rescheduleAppointment,
     responsibles,
-    restoreAppointment,
-    sendReminder,
     serviceOf,
     snapshotAppointment,
-    toggleDocument,
     userOf,
     ValidationError,
 } from '../domain.js';
@@ -164,26 +159,30 @@ export default function appointmentDetail({ params, state, user }) {
             );
 
             root.querySelectorAll('[data-doc]').forEach((button) =>
-                button.addEventListener('click', () => {
-                    const toggled = store.commit((s, u) => toggleDocument(s, u, appointment.id, Number(button.dataset.doc)));
-                    const done = Boolean(toggled.receivedAt);
-                    const count = appointment.documents.filter((d) => d.receivedAt).length;
+                button.addEventListener('click', async () => {
+                    try {
+                        const toggled = await store.action('toggleDocument', appointment.id, Number(button.dataset.doc));
+                        const done = Boolean(toggled.receivedAt);
+                        const count = appointmentOf(store.state, appointment.id).documents.filter((d) => d.receivedAt).length;
 
-                    button.classList.toggle('is-done', done);
-                    button.classList.toggle('just-done', done);
-                    button.setAttribute('aria-checked', String(done));
-                    button.querySelector('.state').textContent = done ? 'Entregue' : 'Pendente';
-                    root.querySelector('.progress i').style.width = `${(count / total) * 100}%`;
-                    root.querySelector('.progress').setAttribute('aria-valuenow', String(count));
-                    root.querySelector('.doc-count').textContent = `${count} de ${total} entregues`;
+                        button.classList.toggle('is-done', done);
+                        button.classList.toggle('just-done', done);
+                        button.setAttribute('aria-checked', String(done));
+                        button.querySelector('.state').textContent = done ? 'Entregue' : 'Pendente';
+                        root.querySelector('.progress i').style.width = `${(count / total) * 100}%`;
+                        root.querySelector('.progress').setAttribute('aria-valuenow', String(count));
+                        root.querySelector('.doc-count').textContent = `${count} de ${total} entregues`;
+                    } catch (error) {
+                        toast(error.message);
+                    }
                 }),
             );
 
             root.querySelector('#reschedule')?.addEventListener('click', () => openReschedule(appointment));
 
-            root.querySelector('#send-reminder')?.addEventListener('click', () => {
+            root.querySelector('#send-reminder')?.addEventListener('click', async () => {
                 try {
-                    const email = store.commit((s, u) => sendReminder(s, u, appointment.id));
+                    const email = await store.action('sendReminder', appointment.id);
                     toast(`Lembrete enviado para ${email}.`);
                     refresh();
                 } catch (error) {
@@ -202,7 +201,7 @@ async function updateStatus(appointment, status) {
     const before = snapshotAppointment(appointment);
 
     try {
-        store.commit((s, u) => changeStatus(s, u, appointment.id, status));
+        await store.action('changeStatus', appointment.id, status);
     } catch (error) {
         if (!(error instanceof ValidationError)) throw error;
         toast(error.message);
@@ -212,9 +211,13 @@ async function updateStatus(appointment, status) {
     refresh();
     toast(`Status alterado para "${STATUS[status].label}".`, {
         actionLabel: 'Desfazer',
-        onAction: () => {
-            store.commit((s) => restoreAppointment(s, before));
-            refresh();
+        onAction: async () => {
+            try {
+                await store.action('restoreAppointment', before);
+                refresh();
+            } catch (error) {
+                toast(error.message);
+            }
         },
     });
 }
@@ -262,10 +265,13 @@ function openReschedule(appointment) {
             form.addEventListener('input', check);
             check();
 
-            form.addEventListener('submit', (event) => {
+            form.addEventListener('submit', async (event) => {
                 event.preventDefault();
+                const submit = form.querySelector('[type="submit"]');
+                if (submit.disabled) return;
+                submit.disabled = true;
                 try {
-                    store.commit((s, u) => rescheduleAppointment(s, u, appointment.id, period()));
+                    await store.action('rescheduleAppointment', appointment.id, period());
                     close();
                     toast('Horário e responsável atualizados.');
                     refresh();
@@ -273,6 +279,8 @@ function openReschedule(appointment) {
                     if (!(error instanceof ValidationError)) throw error;
                     problem.textContent = error.message;
                     problem.hidden = false;
+                } finally {
+                    submit.disabled = false;
                 }
             });
         },

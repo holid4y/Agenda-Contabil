@@ -1,5 +1,3 @@
-// Same vocabulary and catalog as the web system (app/Domain, lang/pt_BR, ServiceCatalogSeeder).
-
 export const PROJECT = {
     kicker: 'Sustentabilidade',
     name: 'Econômica e Financeira',
@@ -37,7 +35,6 @@ export const TRANSITIONS = {
     no_show: [],
 };
 
-// These statuses hold the time slot.
 export const BLOCKING = ['scheduled', 'confirmed', 'in_progress'];
 
 export const LOCATION_TYPES = {
@@ -63,7 +60,6 @@ const IRPF_DOCUMENTS = [
     'Dados bancários para restituição',
 ];
 
-// minutes is the suggested duration.
 export const CATALOG = [
     {
         slug: 'fiscal',

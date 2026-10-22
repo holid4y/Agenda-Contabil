@@ -5,7 +5,6 @@ import {
     conflictMessage,
     findConflict,
     responsibles,
-    scheduleAppointment,
     searchClients,
     serviceOf,
     ValidationError,
@@ -381,24 +380,25 @@ const wireWhen = (box, show, state) => {
     form.querySelector('#location').addEventListener('input', (event) => (draft.location = event.target.value));
     form.querySelector('#notes').addEventListener('input', (event) => (draft.notes = event.target.value));
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        const submit = form.querySelector('[type="submit"]');
+        if (submit.disabled) return;
+        submit.disabled = true;
         const { start, end } = period();
 
         try {
-            const created = store.commit((s, u) =>
-                scheduleAppointment(s, u, {
-                    clientId: draft.clientId,
-                    serviceSlug: draft.serviceSlug,
-                    serviceDetails: draft.serviceDetails,
-                    responsibleId: draft.responsibleId,
-                    start,
-                    end,
-                    locationType: draft.locationType,
-                    location: draft.location,
-                    notes: draft.notes,
-                }),
-            );
+            const created = await store.action('scheduleAppointment', {
+                clientId: draft.clientId,
+                serviceSlug: draft.serviceSlug,
+                serviceDetails: draft.serviceDetails,
+                responsibleId: draft.responsibleId,
+                start,
+                end,
+                locationType: draft.locationType,
+                location: draft.location,
+                notes: draft.notes,
+            });
             toast('Atendimento agendado.');
             navigate(`/atendimentos/${created.id}`, { replace: true });
         } catch (error) {
@@ -406,6 +406,8 @@ const wireWhen = (box, show, state) => {
             problem.textContent = error.message;
             problem.hidden = false;
             problem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } finally {
+            submit.disabled = false;
         }
     });
 };

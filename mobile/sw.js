@@ -1,4 +1,4 @@
-const CACHE = 'agenda-contabil-v2';
+const CACHE = 'agenda-contabil-v4';
 
 const FILES = [
     './',
@@ -11,6 +11,9 @@ const FILES = [
     'icons/icon-512.png',
     'icons/logo.svg',
     'js/app.js',
+    'js/viewport.js',
+    'js/config.js',
+    'js/api.js',
     'js/curtain.js',
     'js/data.js',
     'js/domain.js',
@@ -47,6 +50,7 @@ self.addEventListener('activate', (event) => {
 
 // Cached copy first so the app opens without signal; the network copy replaces it for next time.
 self.addEventListener('fetch', (event) => {
+    if (new URL(event.request.url).pathname.includes('/api/')) return;
     if (event.request.method !== 'GET' || new URL(event.request.url).origin !== location.origin) return;
 
     event.respondWith(

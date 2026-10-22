@@ -1,6 +1,6 @@
-// The only place that knows where the data lives: localStorage for now.
-// With the server, this and domain.js are what get replaced by /api/v1 calls.
-
+import { config } from './config.js';
+import { createApi } from './api.js';
+import * as domain from './domain.js';
 import { buildSeed } from './seed.js';
 import { dayKey } from './util.js';
 
@@ -19,9 +19,7 @@ const write = (key, value) => {
     try {
         if (value === null) localStorage.removeItem(key);
         else localStorage.setItem(key, value);
-    } catch {
-        // Private mode or full storage: keep going from memory.
-    }
+    } catch {}
 };
 
 const load = () => {
@@ -29,7 +27,6 @@ const load = () => {
     if (raw) {
         try {
             const saved = JSON.parse(raw);
-            // Untouched demo data from another day is rebuilt, so today is never empty.
             const stale = !saved.meta.edited && saved.meta.seededOn !== dayKey(Date.now());
             if (saved.version === 1 && !stale) return saved;
         } catch {}
@@ -39,13 +36,70 @@ const load = () => {
     return fresh;
 };
 
-let state = load();
-let userId = Number(read(SESSION_KEY)) || null;
+const empty = () => ({ users: [], clients: [], services: [], appointments: [], counters: {}, meta: {} });
+const validState = (value) => value && ['users', 'clients', 'services', 'appointments'].every((key) => Array.isArray(value[key]));
+const api = createApi(config.apiUrl);
+let state = config.mode === 'demo' ? load() : empty();
+let userId = config.mode === 'demo' ? Number(read(SESSION_KEY)) || null : null;
+let pending = false;
 const listeners = new Set();
 
 const persist = () => write(DATA_KEY, JSON.stringify(state));
 
 export const store = {
+    get isDemo() {
+        return config.mode === 'demo';
+    },
+
+    async action(name, ...args) {
+        if (!this.isDemo) {
+            if (pending) throw new domain.ValidationError('Aguarde a operação em andamento.');
+            pending = true;
+            try {
+                const response = await api.request('/mobile/commands', { method: 'POST', body: { name, args } });
+                if (!validState(response?.state) || !Object.prototype.hasOwnProperty.call(response, 'result')) throw new domain.ValidationError('Resposta inválida do servidor.');
+                state = response.state;
+                listeners.forEach((listener) => listener());
+                return response.result;
+            } catch (error) {
+                if (error.status === 401) {
+                    state = empty();
+                    userId = null;
+                    location.hash = '/login';
+                }
+                throw error;
+            } finally {
+                pending = false;
+            }
+        }
+        if (name === 'restoreAppointment') return this.commit((s) => domain[name](s, ...args));
+        return this.commit((s, u) => domain[name](s, u, ...args));
+    },
+
+    async reload() {
+        if (this.isDemo) return;
+        if (pending) throw new domain.ValidationError('Aguarde a operação em andamento.');
+        pending = true;
+        try {
+            const response = await api.request('/mobile/bootstrap');
+            if (!validState(response?.state)) throw new domain.ValidationError('Resposta inválida do servidor.');
+            state = response.state;
+        } catch (error) {
+            if (error.status === 401) {
+                state = empty();
+                userId = null;
+                location.hash = '/login';
+            }
+            throw error;
+        } finally {
+            pending = false;
+        }
+    },
+
+    async forgotPassword(email) {
+        if (this.isDemo) return;
+        await api.request('/forgot-password', { method: 'POST', body: { email } });
+    },
     get state() {
         return state;
     },
@@ -59,15 +113,32 @@ export const store = {
         return () => listeners.delete(listener);
     },
 
-    /** Runs a domain function against the state, saves, and tells the views. */
     commit(mutation) {
+        if (!this.isDemo) throw new Error('Use store.action in server mode.');
         const result = mutation(state, this.user);
         persist();
         listeners.forEach((listener) => listener());
         return result;
     },
 
-    login(email, password) {
+    async login(email, password) {
+        if (!this.isDemo) {
+            try {
+                const auth = await api.request('/login', { method: 'POST', body: { email: email.trim().toLowerCase(), password, device_name: 'Agenda Contábil mobile' } });
+                if (!auth?.token || !auth?.user?.id) throw new domain.ValidationError('Resposta inválida do servidor.');
+                api.setToken(auth.token);
+                const response = await api.request('/mobile/bootstrap');
+                if (!validState(response?.state) || !response.state.users.some((u) => u.id === auth.user.id && u.active)) throw new domain.ValidationError('Resposta inválida do servidor.');
+                state = response.state;
+                userId = auth.user.id;
+                return this.user;
+            } catch (error) {
+                api.clear();
+                state = empty();
+                userId = null;
+                throw error;
+            }
+        }
         const user = state.users.find((u) => u.email === email.trim().toLowerCase() && u.active);
         if (!user || password !== 'password') return null;
         userId = user.id;
@@ -75,19 +146,30 @@ export const store = {
         return user;
     },
 
-    /** Demo only: shows how each profile sees the app. */
     switchUser(id) {
+        if (!this.isDemo) return;
         userId = id;
         write(SESSION_KEY, String(id));
         listeners.forEach((listener) => listener());
     },
 
-    logout() {
+    async logout() {
+        if (!this.isDemo) {
+            try {
+                await api.request('/logout', { method: 'POST' });
+            } finally {
+                api.clear();
+                state = empty();
+                userId = null;
+            }
+            return;
+        }
         userId = null;
         write(SESSION_KEY, null);
     },
 
     reset() {
+        if (!this.isDemo) return;
         state = buildSeed();
         persist();
         listeners.forEach((listener) => listener());

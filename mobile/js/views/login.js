@@ -18,18 +18,18 @@ export default function login() {
             <form class="card form rise" id="login-form" novalidate>
                 <div class="field">
                     <label for="email">E-mail</label>
-                    <input class="input" id="email" name="email" type="email" inputmode="email" autocomplete="username" value="admin@agenda.local" required>
+                    <input class="input" id="email" name="email" type="email" inputmode="email" autocomplete="username" value="${store.isDemo ? 'admin@agenda.local' : ''}" required>
                 </div>
                 <div class="field">
                     <label for="password">Senha</label>
-                    <input class="input" id="password" name="password" type="password" autocomplete="current-password" value="password" required>
+                    <input class="input" id="password" name="password" type="password" autocomplete="current-password" value="${store.isDemo ? 'password' : ''}" required>
                 </div>
                 <p class="error-text" id="login-error" role="alert" hidden></p>
                 <button class="btn btn-primary btn-block" type="submit">Entrar</button>
                 <button class="link small" type="button" id="forgot">Esqueci minha senha</button>
             </form>
 
-            <p class="demo-note rise">Versão de demonstração: os dados são fictícios e ficam salvos só neste aparelho. O login já vem preenchido.</p>
+            <p class="demo-note rise" ${store.isDemo ? '' : 'hidden'}>Versão de demonstração: os dados são fictícios e ficam salvos só neste aparelho. O login já vem preenchido.</p>
 
             <p class="login-foot">Projeto de extensão do curso de Ciências Contábeis<br>Universidade Feevale · ${esc(PROJECT.coordinator)}</p>
         </div>`,
@@ -38,9 +38,25 @@ export default function login() {
             const form = root.querySelector('#login-form');
             const error = root.querySelector('#login-error');
 
-            form.addEventListener('submit', (event) => {
+            form.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const user = store.login(form.email.value, form.password.value);
+                if (!form.reportValidity()) return;
+                const button = form.querySelector('[type=submit]');
+                if (button.disabled) return;
+                button.disabled = true;
+                button.textContent = 'Entrando…';
+                error.hidden = true;
+                let user;
+                try {
+                    user = await store.login(form.email.value, form.password.value);
+                } catch (problem) {
+                    error.textContent = problem.message;
+                    error.hidden = false;
+                    return;
+                } finally {
+                    button.disabled = false;
+                    button.textContent = 'Entrar';
+                }
 
                 if (!user) {
                     error.textContent = 'E-mail ou senha incorretos. Confira os dados e tente de novo.';
@@ -48,16 +64,22 @@ export default function login() {
                     return;
                 }
 
-                const button = form.querySelector('[type=submit]');
-                button.disabled = true;
-                button.textContent = 'Entrando…';
                 navigate('/');
                 playWelcome(firstName(user.name), originOf(button));
             });
 
-            root.querySelector('#forgot').addEventListener('click', () =>
-                toast('Na versão com servidor, enviaremos um e-mail para você criar uma nova senha.'),
-            );
+            root.querySelector('#forgot').addEventListener('click', async (event) => {
+                if (!form.email.reportValidity()) return;
+                event.currentTarget.disabled = true;
+                try {
+                    await store.forgotPassword(form.email.value);
+                    toast(store.isDemo ? 'Recuperação de senha disponível quando o servidor estiver conectado.' : 'Se o e-mail estiver cadastrado, você receberá as instruções para redefinir sua senha.');
+                } catch (problem) {
+                    toast(problem.message);
+                } finally {
+                    root.querySelector('#forgot').disabled = false;
+                }
+            });
         },
     };
 }

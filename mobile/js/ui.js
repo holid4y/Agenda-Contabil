@@ -1,4 +1,3 @@
-
 import { LOCATION_TYPES, STATUS } from './data.js';
 import { categoryOf, clientOf, pendingDocuments, serviceOf } from './domain.js';
 import { esc, initials, plural, timeStr } from './util.js';
@@ -88,7 +87,6 @@ const trapEscape = (close) => (event) => {
     if (event.key === 'Escape') close();
 };
 
-/** Bottom sheet. `build(close)` returns HTML; `mount(el, close)` wires it. Returns close(). */
 export function openSheet({ title, lead = '', html, mount, label }) {
     lastFocus = document.activeElement;
     const root = overlayRoot();
@@ -120,7 +118,6 @@ export function openSheet({ title, lead = '', html, mount, label }) {
     return close;
 }
 
-/** Resolves true when the person confirms. */
 export function confirmDialog({ title, message, confirmLabel = 'Confirmar', cancelLabel = 'Voltar', danger = false }) {
     return new Promise((resolve) => {
         lastFocus = document.activeElement;

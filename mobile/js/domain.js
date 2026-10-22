@@ -1,5 +1,3 @@
-// Business rules as plain functions over the state, so they run in Node tests.
-
 import {
     BLOCKING,
     CATALOG,
@@ -70,7 +68,6 @@ export const findConflict = (state, { responsibleId, start, end, ignoreId = null
 export const conflictMessage = (state, conflict) =>
     `${userOf(state, conflict.responsibleId).name} já tem atendimento das ${timeStr(conflict.start)} às ${timeStr(conflict.end)}. Escolha outro horário ou outro responsável.`;
 
-/** Blocking appointments of one responsible on a given day, for "occupied" hints. */
 export const busyOn = (state, responsibleId, key, ignoreId = null) =>
     state.appointments
         .filter((a) => a.id !== ignoreId && a.responsibleId === responsibleId && isBlocking(a) && dayKey(a.start) === key)
@@ -231,7 +228,7 @@ export function sendReminder(state, actor, id, now = Date.now()) {
     return client.email;
 }
 
-export const snapshotAppointment = (appointment) => structuredClone(appointment);
+export const snapshotAppointment = (appointment) => JSON.parse(JSON.stringify(appointment));
 
 export function restoreAppointment(state, snapshot) {
     const index = state.appointments.findIndex((a) => a.id === snapshot.id);

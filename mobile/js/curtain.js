@@ -1,5 +1,3 @@
-// Full-screen curtains for signing in and out, same idea as the web version.
-
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const app = () => document.getElementById('app');
 
@@ -10,7 +8,6 @@ const LOGO = `<svg class="curtain-logo" viewBox="0 0 48 48" fill="none" stroke="
     <path class="logo-coin" d="M28.6 18.6c-.9-1.5-2.6-2.4-4.6-2.4-2.7 0-4.6 1.4-4.6 3.5 0 4.8 9.6 2.6 9.6 7.9 0 2.2-2.1 3.8-5 3.8-2.2 0-4.1-.9-5-2.6M24 13v22"/>
 </svg>`;
 
-/** Center of an element, in #app coordinates. */
 export const originOf = (element) => {
     const box = app().getBoundingClientRect();
     const rect = element.getBoundingClientRect();
@@ -43,8 +40,10 @@ export function playWelcome(name, origin) {
 
     const curtain = build('welcome', `Olá, ${name}`, 'Sua agenda está pronta.', origin);
     app().classList.add('is-welcoming');
+    let fallback;
 
     const finish = () => {
+        clearTimeout(fallback);
         curtain.remove();
         app().classList.remove('is-welcoming');
     };
@@ -53,9 +52,9 @@ export function playWelcome(name, origin) {
         if (event.animationName === 'curtain-leave') finish();
     });
     curtain.addEventListener('click', finish);
+    fallback = setTimeout(finish, 3400);
 }
 
-/** Plays the goodbye, then calls `leave` (which signs out) and shows the signed-out curtain. */
 export function playFarewell(name, origin, leave) {
     if (reduced()) {
         leave();
@@ -76,6 +75,7 @@ export function playFarewell(name, origin, leave) {
             if (event.animationName === 'curtain-leave') goodbye.remove();
         });
         goodbye.addEventListener('click', () => goodbye.remove());
+        setTimeout(() => goodbye.remove(), 2400);
     };
 
     farewell.addEventListener('click', go);

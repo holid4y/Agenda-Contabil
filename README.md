@@ -9,7 +9,12 @@ orçamento e prestação de contas.
 
 Há uma [prévia no GitHub Pages](https://unusualhatter.github.io/Agenda-Contabil/)
 com dados fictícios. O login já vem preenchido e nada do que você mudar lá é
-salvo.
+salvo. A [demonstração mobile](https://unusualhatter.github.io/Agenda-Contabil/app/)
+usa dados fictícios salvos apenas no aparelho.
+
+O app Android/iOS fica em [`mobile/`](mobile/README.md), com instruções de build,
+testes e [contrato da API futura](mobile/API.md). O workflow de Pages publica
+sempre o modo demonstração.
 
 ![Agenda da semana](docs/screenshots/agenda.png)
 

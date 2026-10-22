@@ -1,5 +1,5 @@
 import { CATALOG } from '../data.js';
-import { addServiceDocument, can, removeServiceDocument, serviceOf, setServiceActive, ValidationError } from '../domain.js';
+import { can, serviceOf, ValidationError } from '../domain.js';
 import { refresh } from '../router.js';
 import { store } from '../store.js';
 import { backButton, emptyState, icon, openSheet, toast } from '../ui.js';
@@ -48,9 +48,9 @@ function openService(slug) {
         mount(sheet, close) {
             const docs = sheet.querySelector('#docs');
 
-            const run = (mutation) => {
+            const run = async (name, ...args) => {
                 try {
-                    store.commit(mutation);
+                    await store.action(name, ...args);
                 } catch (error) {
                     if (!(error instanceof ValidationError)) throw error;
                     toast(error.message);
@@ -60,18 +60,18 @@ function openService(slug) {
 
             docs.addEventListener('click', (event) => {
                 const remove = event.target.closest('[data-remove]');
-                if (remove) run((s, u) => removeServiceDocument(s, u, slug, Number(remove.dataset.remove)));
+                if (remove) run('removeServiceDocument', slug, Number(remove.dataset.remove));
             });
 
-            sheet.querySelector('#add').addEventListener('submit', (event) => {
+            sheet.querySelector('#add').addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const input = sheet.querySelector('#doc-name');
-                run((s, u) => addServiceDocument(s, u, slug, input.value));
+                await run('addServiceDocument', slug, input.value);
                 input.value = '';
             });
 
             sheet.querySelector('#active').addEventListener('change', (event) => {
-                run((s, u) => setServiceActive(s, u, slug, event.target.checked));
+                run('setServiceActive', slug, event.target.checked);
             });
 
             sheet.addEventListener('click', (event) => {

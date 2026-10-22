@@ -86,8 +86,9 @@ jobs:
 
       - name: Add mobile app
         run: |
-          mkdir build/preview/app
-          cp -r mobile/index.html mobile/manifest.webmanifest mobile/sw.js mobile/css mobile/fonts mobile/icons mobile/js build/preview/app/
+          npm --prefix mobile run build:demo
+          mkdir -p build/preview/app
+          cp -R mobile/dist/. build/preview/app/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

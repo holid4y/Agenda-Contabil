@@ -1,3 +1,5 @@
+import { watchViewport } from './viewport.js';
+import { config } from './config.js';
 import { applyTheme } from './theme.js';
 import { route, start } from './router.js';
 import { icon } from './ui.js';
@@ -10,6 +12,8 @@ import login from './views/login.js';
 import newAppointment from './views/newAppointment.js';
 import services from './views/services.js';
 
+if (window.Capacitor?.isNativePlatform?.()) document.documentElement.classList.add('is-native');
+watchViewport();
 applyTheme();
 
 route('/login', login, { public: true });
@@ -33,6 +37,6 @@ document.getElementById('tabbar').innerHTML = `
 
 start(document.getElementById('view'));
 
-if ('serviceWorker' in navigator) {
+if (config.mode === 'demo' && !window.Capacitor?.isNativePlatform?.() && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

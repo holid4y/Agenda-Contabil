@@ -78,3 +78,27 @@ jobs:
 
       - name: Run tests
         run: php artisan test
+
+  mobile:
+    name: Mobile tests and native asset sync
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:layout
+      - run: npm run sync
+      - name: Verify server build
+        run: npm run build
+        env:
+          MOBILE_MODE: server
+          MOBILE_API_URL: https://api.example.test/api/v1

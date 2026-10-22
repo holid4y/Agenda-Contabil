@@ -1,5 +1,3 @@
-// Profile sheet: theme, demo profile switch, project contact, reset and sign-out.
-
 import { PROJECT, ROLES } from './data.js';
 import { can } from './domain.js';
 import { navigate, refresh } from './router.js';
@@ -31,18 +29,19 @@ export function openProfile() {
                 ${THEMES.map(([value, label, symbol]) => `<button type="button" role="radio" aria-checked="${getPreference() === value}" data-theme-option="${value}">${icon(symbol)}${label}</button>`).join('')}
             </div>
 
-            <div class="menu-label">Ver o app como (demonstração)</div>
+            ${store.isDemo ? `<div class="menu-label">Ver o app como (demonstração)</div>
             <div class="seg" role="radiogroup" aria-label="Perfil de demonstração">
                 ${store.state.users
                     .filter((u) => ['admin', 'team', 'viewer'].includes(u.role) && /^(admin|equipe|visualizador)@/.test(u.email))
                     .map((u) => `<button type="button" role="radio" aria-checked="${u.id === user.id}" data-user="${u.id}">${ROLES[u.role].replace('Membro da equipe', 'Equipe')}</button>`)
                     .join('')}
             </div>
-            <p class="hint-text" style="margin-top:6px">O visualizador só consulta: os botões de alteração somem e o sistema recusa qualquer mudança.</p>
+            <p class="hint-text" style="margin-top:6px">O visualizador só consulta: os botões de alteração somem e o sistema recusa qualquer mudança.</p>` : ''}
 
             <div class="menu">
+                ${!store.isDemo ? `<button class="menu-item" type="button" id="reload">${icon('refresh')}<span>Atualizar dados<small>Buscar as alterações da equipe no servidor</small></span></button>` : ''}
                 ${can(user, 'services.manage') ? `<a class="menu-item" href="#/servicos" data-dismiss>${icon('briefcase')}<span>Serviços e documentos<small>Demandas e listas do que levar</small></span></a>` : ''}
-                <button class="menu-item" type="button" id="reset">${icon('refresh')}<span>Restaurar dados de demonstração<small>Volta ao início, com a agenda em torno de hoje</small></span></button>
+                ${store.isDemo ? `<button class="menu-item" type="button" id="reset">${icon('refresh')}<span>Restaurar dados de demonstração<small>Volta ao início, com a agenda em torno de hoje</small></span></button>` : ''}
                 <button class="menu-item is-danger" type="button" id="logout">${icon('logout')}<span>Sair</span></button>
             </div>
 
@@ -70,7 +69,20 @@ export function openProfile() {
                 }),
             );
 
-            sheet.querySelector('#reset').addEventListener('click', async () => {
+            sheet.querySelector('#reload')?.addEventListener('click', async (event) => {
+                event.currentTarget.disabled = true;
+                try {
+                    await store.reload();
+                    close();
+                    refresh();
+                    toast('Dados atualizados.');
+                } catch (error) {
+                    close();
+                    toast(error.message);
+                }
+            });
+
+            sheet.querySelector('#reset')?.addEventListener('click', async () => {
                 const ok = await confirmDialog({
                     title: 'Restaurar dados de demonstração?',
                     message: 'Tudo o que você cadastrou neste aparelho será apagado e a agenda volta ao exemplo inicial.',
@@ -89,9 +101,14 @@ export function openProfile() {
                 const origin = originOf(event.currentTarget);
                 const name = firstName(user.name);
                 close();
-                playFarewell(name, origin, () => {
-                    store.logout();
-                    navigate('/login');
+                playFarewell(name, origin, async () => {
+                    try {
+                        await store.logout();
+                    } catch (error) {
+                        toast(error.message);
+                    } finally {
+                        navigate('/login');
+                    }
                 });
             });
         },
