@@ -1,3 +1,4 @@
+import { emailLink, whatsappLink } from '../contacts.js';
 import { CLIENT_TYPES } from '../data.js';
 import { can, clientAppointments, clientOf, searchClients, ValidationError } from '../domain.js';
 import { navigate } from '../router.js';
@@ -108,9 +109,11 @@ export function clientDetail({ params, state, user }) {
                 <h1>${esc(client.name)}</h1>
                 ${client.tradeName ? `<p class="muted">${esc(client.tradeName)}</p>` : ''}
                 <div class="contact-line" style="margin-top:14px">
-                    ${number ? `<a class="pill-link" href="tel:+${number}">${icon('phone')}Ligar</a><a class="pill-link" href="https://wa.me/${number}" target="_blank" rel="noopener">${icon('chat')}WhatsApp</a>` : ''}
-                    ${client.email ? `<a class="pill-link" href="mailto:${esc(client.email)}">${icon('mail')}E-mail</a>` : ''}
+                    ${number ? `<a class="pill-link" href="tel:+${number}">${icon('phone')}Ligar</a><a class="pill-link" href="${esc(whatsappLink(client.phone))}" target="_blank" rel="noopener">${icon('chat')}WhatsApp</a>` : ''}
+                    ${emailLink(client.email) ? `<a class="pill-link" href="${esc(emailLink(client.email))}">${icon('mail')}E-mail</a>` : ''}
                 </div>
+                ${!number ? '<p class="hint-text" style="margin-top:8px">Cadastre um telefone válido com DDD para ligar ou abrir o WhatsApp.</p>' : ''}
+                ${!emailLink(client.email) ? '<p class="hint-text" style="margin-top:8px">Cadastre um e-mail válido para escrever ao atendido.</p>' : ''}
             </section>
 
             <section class="card rise" style="margin-top:12px">

@@ -9,7 +9,6 @@ use App\Domain\Appointments\Actions\MarkDocumentReceived;
 use App\Domain\Appointments\Actions\RescheduleAppointment;
 use App\Domain\Appointments\Actions\SendAppointmentReminder;
 use App\Domain\Appointments\Enums\AppointmentStatus;
-use App\Domain\Appointments\ReminderMessage;
 use App\Models\Appointment;
 use App\Models\User;
 use App\Support\DisplayTimezone;
@@ -109,13 +108,12 @@ class AppointmentDetails extends Component
 
     public function render(): View
     {
-        $this->appointment->load(['client', 'service.category', 'responsible', 'documents', 'activities.user']);
+        $this->appointment->load(['client', 'service.category', 'responsible', 'documents', 'activities.user', 'externalForms']);
 
         return view('livewire.appointments.appointment-details', [
             'start' => DisplayTimezone::toLocal($this->appointment->starts_at),
             'end' => DisplayTimezone::toLocal($this->appointment->ends_at),
             'usersById' => User::query()->whereIn('id', $this->mentionedUserIds())->pluck('name', 'id'),
-            'whatsAppUrl' => $this->appointment->client->accepts_reminders ? ReminderMessage::whatsAppUrl($this->appointment) : null,
         ]);
     }
 

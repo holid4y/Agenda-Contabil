@@ -7,3 +7,5 @@
 *.php diff=php
 
 /.github export-ignore
+
+/mobile/js/vendor/* linguist-vendored

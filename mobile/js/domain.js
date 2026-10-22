@@ -8,7 +8,7 @@ import {
     STATUS,
     TRANSITIONS,
 } from './data.js';
-import { addDays, dayKey, digits, isEmail, isValidCnpj, isValidCpf, normalize, startOfDay, timeStr } from './util.js';
+import { addDays, dayKey, digits, dialNumber, isEmail, isValidCnpj, isValidCpf, normalize, startOfDay, timeStr } from './util.js';
 
 export class ValidationError extends Error {
     constructor(message, field = null) {
@@ -109,7 +109,11 @@ export function scheduleAppointment(state, actor, input, now = Date.now()) {
     const conflict = findConflict(state, { responsibleId: input.responsibleId, start: input.start, end: input.end });
     if (conflict) fail(conflictMessage(state, conflict), 'start');
 
+    if (input.externalKey && (typeof input.externalKey !== 'string' || input.externalKey.length > 1024)) fail('Identificador de calendário inválido.');
+    if (input.externalKey && state.appointments.some(item => item.externalKey === input.externalKey || input.externalKey === `atendimento-${item.id}@agenda-contabil`)) fail('Este evento já foi importado.');
+
     const appointment = {
+        externalKey: input.externalKey ?? null,
         id: nextId(state, 'appointment'),
         clientId: client.id,
         serviceSlug: service.slug,
@@ -206,8 +210,10 @@ export function toggleDocument(state, actor, appointmentId, documentId, now = Da
 
 /** Why a reminder cannot go out by e-mail, or null when it can (RF-070). */
 export const reminderBlocker = (client) => {
+    if (!client.active) return 'Este atendido está inativo.';
     if (!client.acceptsReminders) return 'O atendido não autorizou lembretes.';
     if (!client.email) return 'Sem e-mail cadastrado; use o WhatsApp.';
+    if (!isEmail(client.email)) return 'Cadastre um e-mail válido para enviar o lembrete.';
     return null;
 };
 
@@ -249,7 +255,7 @@ export function saveClient(state, actor, input, id = null, now = Date.now()) {
     if (email && !isEmail(email)) fail('Esse e-mail parece incompleto. Confira se tem @ e o final (.com, .br…).', 'email');
 
     const phone = digits(input.phone);
-    if (phone && phone.length < 10) fail('O telefone precisa ter DDD e número. Ex.: (51) 99999-9999.', 'phone');
+    if (phone && !dialNumber(input.phone)) fail('O telefone precisa ter DDD e número. Ex.: (51) 99999-9999.', 'phone');
 
     const document = digits(input.document);
     if (document) {

@@ -1,5 +1,6 @@
 // Livewire 4 bundles Alpine; a second copy would break x-data.
 import { Alpine, Livewire } from '../../vendor/livewire/livewire/dist/livewire.esm';
+import { mountCalendarTools } from './calendar';
 import { startCurtains } from './curtain';
 import { trackNavigation } from './navigation';
 import { startSmoothScroll } from './scroll';
@@ -15,6 +16,7 @@ document.addEventListener('livewire:navigating', () => {
 });
 
 document.addEventListener('livewire:navigated', async () => {
+    mountCalendarTools(Livewire);
     const element = document.querySelector('[data-agenda]');
 
     if (element === null) {

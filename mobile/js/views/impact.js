@@ -131,10 +131,14 @@ export default function impact({ state, user }) {
                 refresh();
             });
 
-            root.querySelector('#export').addEventListener('click', () => {
+            root.querySelector('#export').addEventListener('click', async () => {
                 const labels = { period: periodLabel(range), status: Object.fromEntries(STATUS_ORDER.map((s) => [s, STATUS[s].label])) };
-                downloadFile(`impacto-${dayKey(range.from)}-a-${dayKey(range.to - 86_400_000)}.csv`, indicatorsCsv(state, range, labels));
-                toast('Arquivo CSV gerado.');
+                try {
+                    await downloadFile(`impacto-${dayKey(range.from)}-a-${dayKey(range.to - 86_400_000)}.csv`, indicatorsCsv(state, range, labels));
+                    toast('Arquivo CSV gerado.');
+                } catch {
+                    toast('Não foi possível exportar o arquivo. Tente novamente.');
+                }
             });
         },
     };

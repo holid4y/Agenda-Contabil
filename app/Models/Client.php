@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Domain\Clients\Enums\ClientType;
 use App\Support\BlindIndex;
+use App\Support\ContactLinks;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -85,7 +86,7 @@ class Client extends Model
 
     public function canReceiveReminders(): bool
     {
-        return $this->active && $this->accepts_reminders && filled($this->email);
+        return $this->active && $this->accepts_reminders && ContactLinks::email($this->email) !== null;
     }
 
     public function routeNotificationForMail(): ?string

@@ -16,6 +16,11 @@ O app Android/iOS fica em [`mobile/`](mobile/README.md), com instruções de bui
 testes e [contrato da API futura](mobile/API.md). O workflow de Pages publica
 sempre o modo demonstração.
 
+A [integração com a plataforma de formulários](docs/forms-integration.md) inclui
+webhook autenticado, referência única do atendimento e revisão de vínculos.
+O contrato entre servidores já está implementado; a API de login e operações
+mobile ainda precisa ser implementada.
+
 ![Agenda da semana](docs/screenshots/agenda.png)
 
 ## Para que serve
@@ -131,8 +136,8 @@ vendor/bin/pint --test
 npm run build
 ```
 
-São 176 testes de comportamento: conflito de horários, permissões por perfil,
-lembretes, validações, regras do banco. O Pint confere a formatação. A CI
+Os testes cobrem conflitos de horários, permissões por perfil, lembretes,
+validações, regras do banco e integrações. O Pint confere a formatação. A CI
 (`.github/workflows/ci.yml`) roda os três comandos a cada push e pull request,
 com um PostgreSQL próprio.
 

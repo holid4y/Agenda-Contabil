@@ -18,16 +18,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 #[Fillable([
     'client_id', 'service_id', 'service_details', 'responsible_user_id',
     'starts_at', 'ends_at', 'status', 'location_type', 'location', 'notes',
-    'created_by', 'updated_by',
+    'created_by', 'updated_by', 'calendar_import_key',
 ])]
 class Appointment extends Model
 {
     /** @use HasFactory<AppointmentFactory> */
     use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Appointment $appointment): void {
+            $appointment->integration_id = (string) Str::uuid();
+        });
+    }
+
+    public function externalForms(): HasMany
+    {
+        return $this->hasMany(ExternalForm::class)->latest('source_updated_at');
+    }
 
     protected function casts(): array
     {

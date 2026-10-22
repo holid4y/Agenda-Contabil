@@ -162,31 +162,32 @@
         </div>
 
         <div class="space-y-6 self-start">
+            <x-appointment-forms :appointment="$appointment" />
+            <x-calendar-links :appointment="$appointment" />
             @if ($appointment->status->canBeRescheduled())
                 <x-card>
                     <h2 class="text-2xl">{{ __('reminders.card.title') }}</h2>
                     <p class="mt-2 text-sm text-ink-muted">
                         {{ match (true) {
+                            ! $appointment->client->active => 'Este atendido está inativo.',
                             ! $appointment->client->accepts_reminders => __('reminders.card.no_consent'),
                             $appointment->reminder_sent_at !== null => __('reminders.card.sent_at', ['date' => App\Support\DisplayTimezone::toLocal($appointment->reminder_sent_at)->format('d/m \à\s H:i')]),
-                            blank($appointment->client->email) => __('reminders.card.no_email'),
+                            App\Support\ContactLinks::email($appointment->client->email) === null => 'Cadastre um e-mail válido para o lembrete automático.',
                             default => __('reminders.card.scheduled'),
                         } }}
                     </p>
 
-                    @if ($canUpdate && $appointment->client->accepts_reminders)
+                    @if ($canUpdate && $appointment->client->active && $appointment->client->accepts_reminders)
+                        <div class="mt-4">
+                            <x-contact-links :client="$appointment->client" :message="App\Domain\Appointments\ReminderMessage::text($appointment)" />
+                        </div>
                         <div class="mt-4 flex flex-wrap gap-2">
                             @if ($appointment->client->canReceiveReminders())
                                 <x-secondary-button wire:click="sendReminder" wire:loading.attr="disabled" wire:target="sendReminder">
-                                    {{ $appointment->reminder_sent_at ? __('reminders.card.send_again') : __('reminders.card.send_now') }}
+                                    {{ $appointment->reminder_sent_at ? 'Reenviar pelo servidor' : 'Enviar pelo servidor' }}
                                 </x-secondary-button>
                             @endif
-                            @if ($whatsAppUrl)
-                                <a href="{{ $whatsAppUrl }}" target="_blank" rel="noopener noreferrer"
-                                   class="press inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-moss-soft px-5 py-2.5 text-sm font-semibold text-moss hover:opacity-90">
-                                    {{ __('reminders.card.whatsapp') }}
-                                </a>
-                            @endif
+
                         </div>
                     @endif
                 </x-card>

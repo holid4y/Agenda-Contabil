@@ -1,3 +1,5 @@
+import { phoneNumber, emailAddress } from './contacts.js';
+
 // Dates are epoch ms in the device's local time; day keys are YYYY-MM-DD.
 
 export const esc = (value) =>
@@ -118,19 +120,15 @@ export const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 export const firstName = (name) => String(name).trim().split(/\s+/)[0];
 
 export const formatPhone = (value) => {
-    const d = digits(value).slice(0, 11);
+    const d = digits(value);
+    if (String(value).startsWith('+') || d.length > 11) return value;
     if (d.length <= 2) return d;
     if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
     if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
     return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
-/** Number for wa.me/tel: links, or null when it is too short to dial. */
-export const dialNumber = (phone) => {
-    const d = digits(phone);
-    if (d.length < 10) return null;
-    return d.startsWith('55') && d.length > 11 ? d : `55${d}`;
-};
+export const dialNumber = phoneNumber;
 
 const allSame = (d) => /^(\d)\1+$/.test(d);
 
@@ -180,11 +178,20 @@ export const maskDocument = (value, type) => {
         .replace(/\.(\d{3})(\d)/, '.$1-$2');
 };
 
-export const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+export const isEmail = (value) => emailAddress(value) !== null;
 
-export const downloadFile = (filename, content, type = 'text/csv;charset=utf-8') => {
+export const downloadFile = async (filename, content, type = 'text/csv;charset=utf-8') => {
+    const prefix = type.startsWith('text/csv') ? '\ufeff' : '';
+    if (window.Capacitor?.isNativePlatform?.()) {
+        const filesystem = window.Capacitor.Plugins?.Filesystem;
+        const share = window.Capacitor.Plugins?.Share;
+        if (!filesystem || !share) throw new Error('Atualize a instalação do aplicativo para exportar arquivos.');
+        const file = await filesystem.writeFile({ path: filename, data: prefix + content, directory: 'CACHE', encoding: 'utf8' });
+        await share.share({ title: filename, files: [file.uri], dialogTitle: 'Salvar ou abrir arquivo' });
+        return;
+    }
     // The BOM makes Excel read the accents.
-    const blob = new Blob(['﻿', content], { type });
+    const blob = new Blob([prefix, content], { type });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

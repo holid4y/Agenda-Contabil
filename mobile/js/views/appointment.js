@@ -1,3 +1,6 @@
+import { emailLink, whatsappLink } from '../contacts.js';
+import { formsCard } from '../forms.js';
+import { appointmentEvent, googleCalendarUrl, calendarFile } from '../calendar.js';
 import { PROJECT, STATUS, TRANSITIONS } from '../data.js';
 import {
     appointmentOf,
@@ -19,7 +22,7 @@ import {
 import { refresh } from '../router.js';
 import { store } from '../store.js';
 import { avatar, backButton, confirmDialog, emptyState, icon, openSheet, statusBadge, toast } from '../ui.js';
-import { at, capitalize, dateLong, dateTime, dayKey, dayMonth, dialNumber, esc, timeStr, weekday } from '../util.js';
+import { at, capitalize, dateLong, dateTime, dayKey, dayMonth, dialNumber, downloadFile, esc, timeStr, weekday } from '../util.js';
 
 const CONFIRM = {
     cancelled: {
@@ -60,19 +63,25 @@ const reminderCard = (state, appointment, canWrite) => {
 
     const status = appointment.reminderSentAt
         ? `Enviado por e-mail em ${dateTime(appointment.reminderSentAt)}.`
-        : blocker ?? (open ? 'Será enviado por e-mail cerca de 24 horas antes.' : 'Este atendimento não recebe mais lembretes.');
+        : blocker ?? (open ? (store.isDemo ? 'O envio automático ficará disponível com o servidor.' : 'Lembrete automático configurado no servidor.') : 'Este atendimento não recebe mais lembretes.');
 
-    const whatsapp = number && open
-        ? `<a class="btn btn-soft btn-sm" href="https://wa.me/${number}?text=${encodeURIComponent(reminderText(state, appointment))}" target="_blank" rel="noopener">${icon('chat')}Enviar pelo WhatsApp</a>`
+    const allowed = canWrite && client.active && client.acceptsReminders && open;
+    const mail = allowed ? emailLink(client.email, 'Seu atendimento na Agenda Contábil', reminderText(state, appointment)) : null;
+    const whatsapp = number && allowed
+        ? `<a class="btn btn-soft btn-sm" href="${esc(whatsappLink(client.phone, reminderText(state, appointment)))}" target="_blank" rel="noopener">${icon('chat')}Enviar pelo WhatsApp</a>`
         : '';
-    const email = canWrite && open && !blocker
+    const email = !store.isDemo && canWrite && open && !blocker
         ? `<button class="btn btn-secondary btn-sm" type="button" id="send-reminder">${icon('mail')}${appointment.reminderSentAt ? 'Reenviar e-mail' : 'Enviar e-mail agora'}</button>`
         : '';
 
     return `<section class="card">
         <div class="card-head"><h2>Lembrete</h2></div>
         <p class="muted">${esc(status)}</p>
-        ${whatsapp || email ? `<div class="btn-row">${whatsapp}${email}</div>` : ''}
+        ${whatsapp || mail || email ? `<div class="btn-row">${whatsapp}${mail ? `<a class="btn btn-secondary btn-sm" href="${esc(mail)}">${icon('mail')}Escrever e-mail</a>` : ''}${email}</div>` : ''}
+        ${!client.acceptsReminders ? '<p class="hint-text">O atendido não autorizou lembretes.</p>' : ''}
+        ${!number ? '<p class="hint-text">Cadastre um telefone válido com DDD para abrir o WhatsApp.</p>' : ''}
+        ${!mail && allowed ? '<p class="hint-text">Cadastre um e-mail válido para escrever o lembrete.</p>' : ''}
+        <p class="hint-text" style="margin-top:8px">Você escolhe a conta remetente e confirma o envio no aplicativo de e-mail ou WhatsApp. Abrir a mensagem não confirma o envio.</p>
     </section>`;
 };
 
@@ -139,7 +148,9 @@ export default function appointmentDetail({ params, state, user }) {
                 }
             </section>
 
+            ${formsCard(appointment, canWrite)}
             ${reminderCard(state, appointment, canWrite)}
+            ${appointment.status !== 'cancelled' ? `<section class="card"><h2>Adicionar à minha agenda</h2><p class="hint-text">Uma cópia será criada. Alterações futuras não são sincronizadas automaticamente.</p><div class="btn-row"><a class="btn btn-secondary" href="${esc(googleCalendarUrl(appointmentEvent(state, appointment)))}" target="_blank" rel="noopener noreferrer">Google Agenda</a><button class="btn btn-secondary" type="button" id="export-calendar">Baixar calendário (.ics)</button></div></section>` : ''}
 
             <section class="card">
                 <div class="card-head"><h2>Histórico</h2></div>
@@ -154,6 +165,13 @@ export default function appointmentDetail({ params, state, user }) {
             </section>`,
 
         mount(root) {
+            root.querySelector('#export-calendar')?.addEventListener('click', async () => {
+                try {
+                    await downloadFile(`atendimento-${appointment.id}.ics`, calendarFile(appointmentEvent(store.state, appointment)), 'text/calendar;charset=utf-8');
+                } catch {
+                    toast('Não foi possível exportar o calendário. Tente novamente.');
+                }
+            });
             root.querySelectorAll('[data-status]').forEach((button) =>
                 button.addEventListener('click', () => updateStatus(appointment, button.dataset.status)),
             );

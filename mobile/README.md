@@ -48,6 +48,32 @@ se você testar um dia e apresentar em outro, o "hoje" fica vazio até restaurar
 Se alterar algum arquivo, aumente o número em `CACHE` no `sw.js`. Sem isso o
 celular continua mostrando a versão antiga que está no cache.
 
+## Contatos e Google Agenda
+
+Atalhos de e-mail e WhatsApp ficam na ficha e nos lembretes, com validação dos
+contatos. O e-mail abre no aplicativo do funcionário; ele escolhe a conta e
+confirma o envio. Lembretes exigem consentimento e perfil com escrita.
+
+Nos detalhes do atendimento, use “Google Agenda” para criar uma cópia ou exporte
+um `.ics`. Na agenda, “Importar de outra agenda” permite selecionar um arquivo
+`.ics`, revisar o evento e escolher atendido, serviço e responsável. Duplicados
+e conflitos são recusados. A cópia não é sincronizada automaticamente.
+
+O Google exporta arquivos pelo site no computador, não pelo app. A leitura direta
+da conta exige OAuth e o servidor. Veja os [detalhes e limites](../docs/calendar-integrations.md).
+
+## Formulários vinculados
+
+Os detalhes do atendimento mostram os formulários recebidos pelo servidor,
+inclusive nos atendimentos concluídos. Links usam HTTPS e domínios autorizados;
+a plataforma parceira mantém seu próprio login. No demo a integração fica
+desativada. O [webhook e a revisão de vínculos no web](../docs/forms-integration.md)
+já estão implementados no Laravel; o bootstrap mobile ainda depende da API futura.
+
+Para habilitar os links em um build de servidor, acrescente
+`MOBILE_FORMS_ALLOWED_HOSTS=formularios.exemplo.com` às variáveis do build. Esse
+valor é público e contém apenas domínios. Nenhum segredo de integração vai no app.
+
 ## Testes
 
 ```sh

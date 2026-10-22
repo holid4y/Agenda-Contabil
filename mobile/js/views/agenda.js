@@ -1,3 +1,4 @@
+import { openCalendarImport } from '../calendarImport.js';
 import { STATUS } from '../data.js';
 import { appointmentsOnDay, can, clientOf, responsibles, serviceOf } from '../domain.js';
 import { navigate, refresh } from '../router.js';
@@ -180,11 +181,13 @@ export default function agenda({ state, user }) {
             </div>
             <div style="display:flex;justify-content:center;margin-bottom:12px"><button class="chip" type="button" id="today">Ir para hoje</button></div>
 
+            ${canCreate ? '<button class="btn btn-secondary btn-block" type="button" id="import-calendar" style="margin-bottom:12px">Importar de outra agenda (.ics)</button>' : ''}
             ${body}
             ${canCreate && view.mode !== 'day' ? `<a class="btn btn-secondary btn-block" style="margin-top:16px" href="#/atendimentos/novo?inicio=${dayKey(view.selected)}">${icon('plus')}Agendar neste dia</a>` : ''}`,
 
         mount(root) {
             const go = () => refresh();
+            root.querySelector('#import-calendar')?.addEventListener('click', openCalendarImport);
 
             root.querySelector('#profile').addEventListener('click', openProfile);
             root.querySelector('#today').addEventListener('click', () => {

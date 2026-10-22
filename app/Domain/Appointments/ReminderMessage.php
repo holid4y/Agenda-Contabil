@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Appointments;
 
 use App\Models\Appointment;
+use App\Support\ContactLinks;
 use App\Support\DisplayTimezone;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
@@ -45,20 +46,23 @@ final class ReminderMessage
 
     public static function whatsAppUrl(Appointment $appointment): ?string
     {
-        $digits = preg_replace('/\D/', '', (string) $appointment->client->phone);
+        $phone = ContactLinks::phone($appointment->client->phone);
 
-        if (strlen($digits) < 10) {
+        if ($phone === null) {
             return null;
         }
 
-        $phone = str_starts_with($digits, '55') && strlen($digits) > 11 ? $digits : "55{$digits}";
-        $text = implode("\n", [
+        return "https://wa.me/{$phone}?text=".rawurlencode(self::text($appointment));
+    }
+
+    public static function text(Appointment $appointment): string
+    {
+        return implode("\n", [
             ...self::lines($appointment),
             '',
             __('reminders.respond_prompt').' '.self::responseUrl($appointment),
         ]);
 
-        return "https://wa.me/{$phone}?text=".rawurlencode($text);
     }
 
     private static function start(Appointment $appointment): Carbon

@@ -8,6 +8,7 @@ use App\Domain\Clients\Enums\ClientType;
 use App\Models\Client;
 use App\Rules\BrazilianDocument;
 use App\Support\BlindIndex;
+use App\Support\ContactLinks;
 use Closure;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
@@ -87,9 +88,7 @@ class ClientForm extends Form
     // Landline or mobile with area code, optionally with the country code.
     private function phoneHasDigits(string $attribute, mixed $value, Closure $fail): void
     {
-        $digits = strlen(preg_replace('/\D/', '', (string) $value));
-
-        if ($digits < 10 || $digits > 13) {
+        if (ContactLinks::phone((string) $value) === null) {
             $fail(__('clients.errors.invalid_phone'));
         }
     }

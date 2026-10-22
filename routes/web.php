@@ -6,6 +6,7 @@ use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FormReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderResponseController;
 use App\Models\Appointment;
@@ -26,6 +27,10 @@ Route::middleware(['signed', 'throttle:20,1'])->controller(ReminderResponseContr
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/integracoes/formularios', [FormReviewController::class, 'index'])->name('forms.review');
+    Route::post('/integracoes/formularios/{externalForm}/vincular', [FormReviewController::class, 'store'])
+        ->middleware('throttle:30,1')->name('forms.link');
+
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.edit');

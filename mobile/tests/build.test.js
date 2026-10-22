@@ -20,10 +20,11 @@ test('Pages build stays in demo mode even with server environment variables', as
         }
         await run(process.execPath, [build, '--demo'], {
             cwd: directory,
-            env: { ...process.env, MOBILE_MODE: 'server', MOBILE_API_URL: 'https://api.example.test/api/v1' },
+            env: { ...process.env, MOBILE_MODE: 'server', MOBILE_API_URL: 'https://api.example.test/api/v1', MOBILE_FORMS_ALLOWED_HOSTS: 'forms.example.test' },
         });
         const config = await readFile(`${directory}/dist/js/config.js`, 'utf8');
         assert.match(config, /"mode":"demo","apiUrl":""/);
+        assert.match(config, /"formsHosts":\[\]/);
         const files = await readdir(`${directory}/dist`);
         assert.ok(!files.includes('.env'));
         assert.ok(!files.includes('android'));

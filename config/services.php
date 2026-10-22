@@ -2,17 +2,15 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Resend, Postmark, AWS, and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
+    'forms' => [
+        'enabled' => env('FORMS_ENABLED', false),
+        'webhook_secret' => env('FORMS_WEBHOOK_SECRET', ''),
+        'allowed_hosts' => array_values(array_filter(array_map(
+            fn (string $host): string => strtolower(trim($host)),
+            explode(',', (string) env('FORMS_ALLOWED_HOSTS', '')),
+        ))),
+        'create_url' => env('FORMS_CREATE_URL'),
+    ],
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),

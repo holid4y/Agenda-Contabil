@@ -30,6 +30,7 @@
                         <div><dt class="text-ink-muted">{{ __('clients.fields.notes') }}</dt><dd class="whitespace-pre-line text-ink">{{ $client->notes }}</dd></div>
                     @endif
                 </dl>
+                <x-contact-links :client="$client" />
                 @unless ($client->active)
                     <p class="rounded-soft bg-sunken px-3 py-2 text-sm text-ink-muted">{{ __('clients.index.inactive') }}</p>
                 @endunless

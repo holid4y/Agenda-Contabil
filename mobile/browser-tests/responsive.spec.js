@@ -169,7 +169,7 @@ test('published demo works from a subdirectory without contacting an API', async
     });
     await page.goto('/dist/');
     const config = await page.evaluate(async () => (await import('./js/config.js')).config);
-    expect(config).toEqual({ mode: 'demo', apiUrl: '' });
+    expect(config).toEqual({ mode: 'demo', apiUrl: '', formsHosts: [] });
     await expect(page.locator('#email')).toHaveValue('admin@agenda.local');
     await page.getByRole('button', { name: 'Entrar', exact: true }).click();
     await expect(page.locator('#profile')).toBeVisible();

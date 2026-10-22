@@ -4,6 +4,9 @@ O aplicativo não acessa o banco diretamente. O Laravel deve implementar estes
 endpoints sob `MOBILE_API_URL` (por exemplo `https://agenda.example/api/v1`).
 O contrato abaixo é novo; os endpoints ainda não existem neste repositório.
 
+A API entre servidores para a plataforma de formulários já existe e usa
+autenticação própria. Consulte [o contrato implementado](../docs/forms-integration.md).
+
 ## Autenticação
 
 - `POST /login`: `{email, password, device_name}` → `{token, user}`. Token
@@ -80,3 +83,50 @@ produção, com `Authorization`, `Content-Type`, `Accept` e preflight OPTIONS.
 Respostas autenticadas devem usar `Cache-Control: no-store`. Nenhum segredo ou
 credencial de banco deve ser incluído no app. Não há fila de gravação offline
 em modo servidor: falhas são exibidas e o usuário pode tentar novamente.
+
+## Importação de calendário
+
+`scheduleAppointment` pode receber `input.externalKey` (string, até 1024
+caracteres). É o UID do evento; em recorrências inclui o identificador da
+ocorrência original. O servidor deve calcular SHA-256 e gravar o valor em
+`appointments.calendar_import_key`, protegido por índice único. Retornar `422`
+para evento já importado, inclusive sob concorrência. Não confiar na checagem
+prévia do aparelho. Esse campo não substitui autorização nem validação de horário.
+O Laravel já inclui a migração e a regra na ação `ScheduleAppointment`.
+
+Atalhos `mailto:` e `wa.me` são manuais e não chamam `sendReminder`. O funcionário
+escolhe a conta de e-mail remetente no aplicativo do aparelho. Só a operação de
+envio do servidor pode atualizar `reminder_sent_at`.
+
+Detalhes, limites da importação e requisitos futuros de OAuth:
+[integrações de calendário](../docs/calendar-integrations.md).
+
+## Formulários do parceiro
+
+O serializador futuro de `/mobile/bootstrap` deve incluir em cada atendimento:
+
+```json
+{
+  "integrationId": "b30acc5c-b024-4eb0-955a-8e76f9c3a610",
+  "formsEnabled": true,
+  "formCreateUrl": "https://formularios.exemplo.com/novo?appointment_id=b30acc5c-b024-4eb0-955a-8e76f9c3a610",
+  "forms": [
+    {
+      "title": "Ficha de atendimento",
+      "status": "completed",
+      "url": "https://formularios.exemplo.com/formularios/123"
+    }
+  ]
+}
+```
+
+Use `appointments.integration_id`, nunca o ID numérico ou um hash de dados
+pessoais. `forms` vem do relacionamento `externalForms`; inclua apenas registros
+do atendimento autorizado. Gere os links com `App\Support\FormLinks` e envie
+`url: null` nos removidos. `formsEnabled` acompanha `services.forms.enabled`.
+Visualizadores recebem `formCreateUrl: null`. A associação manual é feita no web.
+
+No build de servidor, configure `MOBILE_FORMS_ALLOWED_HOSTS` com os mesmos
+domínios autorizados no Laravel, separados por vírgula. O app valida os links
+novamente. O webhook é chamado exclusivamente pelo servidor parceiro: seu
+segredo e a assinatura HMAC nunca são enviados ao aplicativo.

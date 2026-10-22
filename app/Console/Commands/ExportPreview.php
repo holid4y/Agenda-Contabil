@@ -8,6 +8,7 @@ use App\Domain\Appointments\Queries\AgendaAppointments;
 use App\Http\Resources\AgendaEventResource;
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\ExternalForm;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Http\Kernel;
@@ -45,8 +46,8 @@ final class ExportPreview extends Command
             ->whereRaw('email !~* ?', ['@([a-z0-9-]+\\.)*example\\.(com|org|net)$'])
             ->exists();
 
-        if ($realContacts) {
-            $this->components->error('Found clients with real e-mail addresses. The preview is built from the demo seed only.');
+        if ($realContacts || ExternalForm::query()->exists()) {
+            $this->components->error('Found real contacts or external forms. The preview is built from the demo seed only.');
 
             return self::FAILURE;
         }
@@ -56,6 +57,8 @@ final class ExportPreview extends Command
 
             return self::FAILURE;
         }
+
+        config(['services.forms.enabled' => false]);
 
         // The internal requests are plain HTTP; links must use the published scheme.
         URL::forceRootUrl($base);

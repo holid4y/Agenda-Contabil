@@ -18,7 +18,6 @@ final class SendAppointmentReminder
             return false;
         }
 
-        // Claimed with a conditional update, so overlapping runs never send it twice.
         $claimed = Appointment::query()
             ->whereKey($appointment->id)
             ->unless($again, fn ($query) => $query->whereNull('reminder_sent_at'))

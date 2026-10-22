@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\ExternalForm;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -78,6 +79,22 @@ class ExportPreviewTest extends TestCase
         $this->artisan('preview:export', ['url' => 'https://example.github.io/Agenda', '--output' => $this->output])
             ->assertFailed();
 
+        $this->assertDirectoryDoesNotExist(base_path($this->output));
+    }
+
+    public function test_it_refuses_to_publish_external_form_metadata(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        (new ExternalForm)->forceFill([
+            'external_id' => 'private-partner-form',
+            'title' => 'Private form',
+            'status' => 'pending',
+            'source_version' => 1,
+            'source_updated_at' => now(),
+            'snapshot_hash' => hash('sha256', 'fixture'),
+        ])->save();
+
+        $this->artisan('preview:export', ['url' => 'https://example.github.io/Agenda', '--output' => $this->output])->assertFailed();
         $this->assertDirectoryDoesNotExist(base_path($this->output));
     }
 }
