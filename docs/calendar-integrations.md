@@ -47,8 +47,8 @@ No web, a revisão preenche o formulário existente. A gravação segue as mesma
 regras de autorização, horário, serviço, checklist e histórico. O identificador
 externo é indexado por SHA-256 em `appointments.calendar_import_key`, com índice
 único. Execute `php artisan migrate` no ambiente do servidor ao atualizar.
-No mobile em modo servidor, a gravação usa `scheduleAppointment` pela API já
-documentada em `mobile/API.md`; o servidor deve aplicar a mesma regra de unicidade.
+No mobile em modo servidor, a gravação usa `scheduleAppointment` pela
+[API do app](mobile-integration.md), com a mesma regra de unicidade.
 
 O calendário local continua sendo a fonte principal. A importação não usa um
 título de evento como identidade de cliente nem cria consentimento de lembretes.

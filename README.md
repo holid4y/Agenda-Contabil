@@ -12,14 +12,19 @@ com dados fictícios. O login já vem preenchido e nada do que você mudar lá �
 salvo. A [demonstração mobile](https://unusualhatter.github.io/Agenda-Contabil/app/)
 usa dados fictícios salvos apenas no aparelho.
 
-O app Android/iOS fica em [`mobile/`](mobile/README.md), com instruções de build,
-testes e [contrato da API futura](mobile/API.md). O workflow de Pages publica
-sempre o modo demonstração.
+O app Android/iOS/PWA fica em [`mobile/`](mobile/README.md). Em modo servidor ele
+entra com a conta da equipe e trabalha sobre os mesmos dados da web, pela
+[API do Laravel](docs/mobile-integration.md). O workflow de Pages publica sempre
+o modo demonstração.
 
 A [integração com a plataforma de formulários](docs/forms-integration.md) inclui
 webhook autenticado, referência única do atendimento e revisão de vínculos.
-O contrato entre servidores já está implementado; a API de login e operações
-mobile ainda precisa ser implementada.
+
+A implantação na AWS (EC2 com Nginx e PHP-FPM, PostgreSQL no Amazon RDS) está em
+[docs/deployment-aws.md](docs/deployment-aws.md). O banco em produção, a operação
+e o que ainda falta estão em [database-production.md](docs/database-production.md),
+[operations.md](docs/operations.md) e
+[production-readiness.md](docs/production-readiness.md).
 
 ![Agenda da semana](docs/screenshots/agenda.png)
 
@@ -65,6 +70,7 @@ Livewire.
 | Peça | O que faz aqui |
 | --- | --- |
 | Laravel 13 e PHP 8.3 | Rotas, regras de negócio, autorização, fila de e-mails |
+| Laravel Sanctum | Tokens do app, que usa a mesma API e as mesmas regras da web |
 | Livewire 4 e Alpine.js | Formulários, busca e telas que respondem sem recarregar |
 | Blade e Tailwind CSS 4 | Telas e estilos, com tema claro e escuro |
 | FullCalendar 6 | A agenda |
@@ -134,12 +140,21 @@ vão para `storage/logs/laravel.log`.
 php artisan test
 vendor/bin/pint --test
 npm run build
+cd mobile && npm test
 ```
 
-Os testes cobrem conflitos de horários, permissões por perfil, lembretes,
-validações, regras do banco e integrações. O Pint confere a formatação. A CI
-(`.github/workflows/ci.yml`) roda os três comandos a cada push e pull request,
-com um PostgreSQL próprio.
+Os testes cobrem:
+
+- conflitos de horários e permissões por perfil;
+- lembretes e validações;
+- regras do banco;
+- a API do app (`tests/Feature/Api`) e as integrações.
+
+`ConcurrentChangesTest` dispara processos em paralelo num banco descartável
+criado ao lado do de testes, por isso o usuário do PostgreSQL precisa de
+`CREATEDB` (o comando de criação acima já dá). O Pint confere a formatação. A
+CI (`.github/workflows/ci.yml`) roda tudo isso a cada push e pull request, com
+um PostgreSQL próprio.
 
 ## Dados pessoais
 
@@ -154,59 +169,42 @@ de quem é atendido, então a proteção desses dados pesou nas decisões:
 - a sessão expira em 60 minutos e termina ao fechar o navegador. Uma conta
   desativada perde o acesso no clique seguinte;
 - em produção a aplicação conecta ao banco com um usuário que não apaga
-  atendimentos nem mexe no histórico (veja "Colocando no ar"), e cada alteração
-  em atendidos e usuários vai para uma trilha de auditoria.
+  atendimentos nem mexe no histórico, sempre com TLS, e cada alteração em
+  atendidos e usuários vai para uma trilha de auditoria;
+- o app recebe só o necessário: nada de senhas ou e-mails de colegas, e o
+  visualizador não recebe CPF/CNPJ nem observações.
 
 ## Colocando no ar
 
-No `.env` do servidor, use `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL`
-com o endereço público e `SESSION_SECURE_COOKIE=true`, e sirva o sistema só por
-HTTPS. Em produção o sistema recusa senhas que aparecem em vazamentos conhecidos
-e não roda os seeders de demonstração.
+O passo a passo para a AWS está em [docs/deployment-aws.md](docs/deployment-aws.md):
+scripts em [`deploy/aws/`](deploy/aws) preparam a EC2, o banco no RDS, o HTTPS,
+a fila e o agendador, e fazem deploys com rollback automático. Em resumo:
 
-Não há cadastro público. Depois das migrations, crie o primeiro administrador no
-terminal (`php artisan tinker`):
+- `.env` de produção a partir de [`deploy/aws/env.production.example`](deploy/aws/env.production.example):
+  `APP_ENV=production`, `APP_DEBUG=false`, cookies seguros, banco com
+  `DB_SSLMODE=verify-full`. Em produção o sistema recusa senhas que aparecem em
+  vazamentos conhecidos e não roda os seeders de demonstração;
+- três papéis no PostgreSQL, criados por [`database/sql/roles.sql`](database/sql/roles.sql):
+  `agenda_owner` (dono das tabelas, roda as migrations), `agenda_app` (a
+  aplicação: lê e grava dados, mas não altera estrutura, histórico ou auditoria)
+  e `agenda_reports` (só a view `appointment_facts`, sem dados pessoais).
+  [`privileges.sql`](database/sql/privileges.sql) roda depois de cada migration
+  e [`verify.sql`](database/sql/verify.sql) confere tudo sem alterar nada.
+  Detalhes em [docs/database-production.md](docs/database-production.md);
+- não há cadastro público. O primeiro administrador e as demais contas são
+  criados no servidor, com a senha digitada sem eco:
 
-```php
-App\Models\User::create([
-    'name' => 'Nome da pessoa',
-    'email' => 'email@exemplo.com',
-    'password' => 'uma-senha-longa-e-unica',
-    'role' => App\Domain\Users\Enums\UserRole::Admin,
-]);
-```
+  ```sh
+  php artisan users:create coordenacao@feevale.br "Nome da pessoa" --role=admin
+  php artisan users:deactivate pessoa@feevale.br   # contas são desativadas, nunca apagadas
+  php artisan users:password pessoa@feevale.br
+  ```
 
-Para desligar uma conta, marque `active` como `false`. O histórico continua
-apontando para ela.
-
-Usuário do banco. Em produção a aplicação não deve conectar como dono do
-PostgreSQL. O script `database/sql/privileges.sql` cria dois papéis: `agenda_app`,
-que lê e grava dados mas não altera estrutura, histórico ou auditoria, e
-`agenda_reports`, que só enxerga a view `appointment_facts` (sem nome, contato,
-documento nem observações). Rode-o depois das migrations, como superusuário:
-
-```sh
-psql -d agenda_contabil -v owner=<dono do banco> \
-     -v app_password='...' -v reports_password='...' \
-     -f database/sql/privileges.sql
-```
-
-Depois, o `.env` passa a usar `DB_USERNAME=agenda_app`, e as migrations dos
-próximos deploys rodam com o dono: `DB_USERNAME=<dono> php artisan migrate --force`.
-
-Lembretes por e-mail precisam de três coisas no servidor: o agendador do Laravel
-no cron, um worker de fila e um servidor SMTP nas variáveis `MAIL_*`.
-
-```
-* * * * * cd /caminho/do/projeto && php artisan schedule:run >> /dev/null 2>&1
-```
-
-```sh
-php artisan queue:work
-```
-
-O agendador dispara `appointments:send-reminders` a cada 15 minutos. Os links do
-e-mail são assinados com o `APP_URL`, então deixam de valer se o endereço mudar.
+- lembretes precisam de um serviço de e-mail aprovado. Até lá, ficam
+  desligados (`MAIL_REMINDERS_ENABLED=false`) e nada é marcado como enviado. O
+  agendador dispara `appointments:send-reminders` a cada 15 minutos. Os links
+  do e-mail são assinados com o `APP_URL`, então deixam de valer se o endereço
+  mudar.
 
 ## Prévia no GitHub Pages
 
@@ -237,11 +235,14 @@ python3 -m http.server 8090 -d build/preview
 ```
 app/Domain/     regras de negócio: agendar, reagendar, status, lembretes, catálogo
 app/Livewire/   formulários e telas interativas
-app/Http/       controllers, requests, middlewares de segurança
+app/Http/       controllers, requests, middlewares de segurança; Api/ é a API do app
 app/Models/     models e relacionamentos
 app/Policies/   quem pode fazer o quê
 resources/js/   agenda, tema, navegação, animações
-database/       migrations, seeders e o script de papéis do PostgreSQL
+database/       migrations, seeders e os scripts de papéis do PostgreSQL
+deploy/aws/     Nginx, PHP-FPM, systemd e scripts de implantação
+mobile/         app Android/iOS/PWA
+docs/           implantação, banco, operação, app e integrações
 ```
 
 O [`PRD.md`](PRD.md) tem os requisitos, as regras de domínio e os marcos do projeto.

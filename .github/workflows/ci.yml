@@ -73,6 +73,9 @@ jobs:
       - name: Check formatting
         run: vendor/bin/pint --test
 
+      - name: Check deploy scripts
+        run: for script in deploy/aws/bin/*.sh; do bash -n "$script"; done
+
       - name: Run migrations
         run: php artisan migrate --force
 
@@ -98,7 +101,6 @@ jobs:
       - run: npm run test:layout
       - run: npm run sync
       - name: Verify server build
-        run: npm run build
+        run: npm run build:server
         env:
-          MOBILE_MODE: server
           MOBILE_API_URL: https://api.example.test/api/v1

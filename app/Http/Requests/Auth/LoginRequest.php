@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -30,9 +31,18 @@ class LoginRequest extends FormRequest
 
     public function authenticate(): void
     {
+        Auth::guard('web')->login($this->authenticatedUser(), $this->boolean('remember'));
+    }
+
+    // Checks the password without starting a session, so the mobile API
+    // shares the same lockout as the login page.
+    public function authenticatedUser(): User
+    {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $guard = Auth::guard('web');
+
+        if (! $guard->validate($this->only('email', 'password'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -40,9 +50,9 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        if (! Auth::user()?->active) {
-            Auth::logout();
+        $user = $guard->getLastAttempted();
 
+        if (! $user->active) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -51,6 +61,9 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+        $guard->getProvider()->rehashPasswordIfRequired($user, $this->only('password'));
+
+        return $user;
     }
 
     public function ensureIsNotRateLimited(): void

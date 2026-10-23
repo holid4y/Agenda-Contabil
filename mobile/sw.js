@@ -1,4 +1,4 @@
-const CACHE = 'agenda-contabil-v7';
+const CACHE = 'agenda-contabil-v8';
 
 const FILES = [
     './',
@@ -30,6 +30,7 @@ const FILES = [
     'js/seed.js',
     'js/store.js',
     'js/theme.js',
+    'js/theme-boot.js',
     'js/ui.js',
     'js/util.js',
     'js/views/agenda.js',
