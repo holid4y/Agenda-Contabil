@@ -42,7 +42,7 @@ final class ScheduleAppointment
     public function handle(User $author, array $attributes): Appointment
     {
         if (! empty($attributes['calendar_import_key']) && Appointment::withTrashed()->where('calendar_import_key', $attributes['calendar_import_key'])->exists()) {
-            throw ValidationException::withMessages(['calendar_import_key' => 'Este evento já foi importado.']);
+            throw ValidationException::withMessages(['calendar_import_key' => __('appointments.errors.already_imported')]);
         }
 
         $service = Service::query()->with('documents')->findOrFail($attributes['service_id']);
@@ -79,7 +79,7 @@ final class ScheduleAppointment
             });
         } catch (UniqueConstraintViolationException $error) {
             if (! empty($attributes['calendar_import_key'])) {
-                throw ValidationException::withMessages(['calendar_import_key' => 'Este evento já foi importado.']);
+                throw ValidationException::withMessages(['calendar_import_key' => __('appointments.errors.already_imported')]);
             }
             throw $error;
         }

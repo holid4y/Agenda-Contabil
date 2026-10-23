@@ -172,6 +172,7 @@
                             ! $appointment->client->active => 'Este atendido está inativo.',
                             ! $appointment->client->accepts_reminders => __('reminders.card.no_consent'),
                             $appointment->reminder_sent_at !== null => __('reminders.card.sent_at', ['date' => App\Support\DisplayTimezone::toLocal($appointment->reminder_sent_at)->format('d/m \à\s H:i')]),
+                            ! config('mail.reminders_enabled') => __('reminders.errors.disabled'),
                             App\Support\ContactLinks::email($appointment->client->email) === null => 'Cadastre um e-mail válido para o lembrete automático.',
                             default => __('reminders.card.scheduled'),
                         } }}
@@ -182,7 +183,7 @@
                             <x-contact-links :client="$appointment->client" :message="App\Domain\Appointments\ReminderMessage::text($appointment)" />
                         </div>
                         <div class="mt-4 flex flex-wrap gap-2">
-                            @if ($appointment->client->canReceiveReminders())
+                            @if ($appointment->client->canReceiveReminders() && config('mail.reminders_enabled'))
                                 <x-secondary-button wire:click="sendReminder" wire:loading.attr="disabled" wire:target="sendReminder">
                                     {{ $appointment->reminder_sent_at ? 'Reenviar pelo servidor' : 'Enviar pelo servidor' }}
                                 </x-secondary-button>

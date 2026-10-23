@@ -115,7 +115,7 @@ class AgendaTest extends TestCase
                 'starts_at' => '2026-10-06T10:30:00',
                 'ends_at' => '2026-10-06T11:30:00',
             ])
-            ->assertUnprocessable()
+            ->assertConflict()
             ->assertJsonPath('errors.starts_at.0', 'Maria já tem atendimento das 10:00 às 11:00. Escolha outro horário ou outro responsável.');
     }
 

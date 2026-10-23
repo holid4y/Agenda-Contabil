@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Appointments;
 
 use App\Domain\Appointments\Actions\ScheduleAppointment;
+use App\Domain\Appointments\CalendarImportKey;
 use App\Domain\Appointments\Enums\LocationType;
 use App\Domain\Clients\Queries\SearchClients;
 use App\Livewire\Forms\ClientForm;
@@ -87,14 +88,9 @@ class CreateAppointment extends Component
             'description' => ['nullable', 'string', 'max:2000'],
             'location' => ['nullable', 'string', 'max:255'],
         ])->validate();
-        if (preg_match('/^atendimento-(\d+)@agenda-contabil$/D', $data['key'], $matches) && Appointment::withTrashed()->whereKey((int) $matches[1])->exists()) {
-            $this->addError('calendar_import_key', 'Este atendimento já está na agenda.');
-
-            return;
-        }
-        $importKey = hash('sha256', $data['key']);
+        $importKey = CalendarImportKey::for($data['key']);
         if (Appointment::withTrashed()->where('calendar_import_key', $importKey)->exists()) {
-            $this->addError('calendar_import_key', 'Este evento já foi importado.');
+            $this->addError('calendar_import_key', __('appointments.errors.already_imported'));
 
             return;
         }

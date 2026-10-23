@@ -15,14 +15,7 @@
     <link rel="preload" href="fonts/fraunces-latin-soft-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/literata-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="css/app.css">
-    <script>
-        (function () {
-            var pref = 'auto';
-            try { pref = localStorage.getItem('agenda-contabil.theme') || 'auto'; } catch (e) {}
-            var dark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-        })();
-    </script>
+    <script src="js/theme-boot.js"></script>
 </head>
 <body>
     <div id="app">

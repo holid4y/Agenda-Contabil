@@ -515,9 +515,11 @@ php artisan test
 
 **Entregáveis:** indicadores de RF-040 a RF-043 e RF-051; filtros; exportação CSV; activity log visível no atendimento.
 
-### Milestone 6 — API
+### Milestone 6 — API (concluído para o app)
 
 **Entregáveis:** Sanctum; `/api/v1`; endpoints essenciais; OpenAPI ou documentação equivalente; feature tests. Preparar para futuro Android app.
+
+O app usa um contrato próprio (`docs/mobile-integration.md`, `mobile/API.md`): login, fotografia do estado e uma lista fechada de comandos sobre as mesmas Actions da web. Os endpoints REST da seção 19 continuam como referência para integrações futuras.
 
 ### Milestone 7 — Integrações
 
