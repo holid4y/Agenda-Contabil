@@ -9,6 +9,7 @@ jobs:
   tests:
     name: Pint + PHPUnit
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -85,6 +86,7 @@ jobs:
   mobile:
     name: Mobile tests and native asset sync
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: mobile
